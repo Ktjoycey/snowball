@@ -16,6 +16,8 @@ public class ClientControls : NetworkBehaviour
     /// Movement Speed
     /// </summary>
     public float Speed = 5;
+    public float RotationSpeed = 40f;
+    public Transform ProjectileOriginReference;
 
     private GameManager gameManager;
 
@@ -37,7 +39,8 @@ public class ClientControls : NetworkBehaviour
         // has the Authority to update the object.
         if (!IsOwner || !IsSpawned) return;
 
-        var multiplier = Speed * Time.deltaTime;
+        float multiplier = Speed * Time.deltaTime;
+        float rotationMultiplier = RotationSpeed * Time.deltaTime;
 
 #if ENABLE_INPUT_SYSTEM && NEW_INPUT_SYSTEM_INSTALLED
         // New input system backends are enabled.
@@ -67,18 +70,32 @@ public class ClientControls : NetworkBehaviour
         {
             transform.position += new Vector3(multiplier, 0, 0);
         }
-        else if(Input.GetKey(KeyCode.W))
+        
+        if(Input.GetKey(KeyCode.W))
         {
-            transform.position += new Vector3(0, 0, multiplier);
+            transform.position += transform.forward * multiplier;
         }
         else if (Input.GetKey(KeyCode.S))
         {
-            transform.position += new Vector3(0, 0, -multiplier);
+            transform.position -= transform.forward * multiplier;
+        }
+
+        if (Input.GetKey(KeyCode.Q))
+        {
+            transform.Rotate(new Vector3(0f, -rotationMultiplier));
+        }
+        else if (Input.GetKey(KeyCode.E))
+        {
+            transform.Rotate(new Vector3(0f, rotationMultiplier));
         }
 
         if (IsClient && Input.GetKeyDown(KeyCode.Space))
         {
-            gameManager.FireProjectileServerRpc(transform.position, transform.rotation);
+            gameManager.FireProjectileServerRpc(
+                ProjectileOriginReference.position,
+                ProjectileOriginReference.eulerAngles,
+                ProjectileOriginReference.forward
+            );
         }
 #endif
     }
