@@ -57,33 +57,14 @@ public class ClientControls : NetworkBehaviour
         float multiplier = Speed * Time.deltaTime;
         float rotationMultiplier = RotationSpeed * Time.deltaTime;
 
-#if ENABLE_INPUT_SYSTEM && NEW_INPUT_SYSTEM_INSTALLED
-        // New input system backends are enabled.
-        if (Keyboard.current.aKey.isPressed)
-        {
-            transform.position += new Vector3(-multiplier, 0, 0);
-        }
-        else if (Keyboard.current.dKey.isPressed)
-        {
-            transform.position += new Vector3(multiplier, 0, 0);
-        }
-        else if (Keyboard.current.wKey.isPressed)
-        {
-            transform.position += new Vector3(0, 0, multiplier);
-        }
-        else if (Keyboard.current.sKey.isPressed)
-        {
-            transform.position += new Vector3(0, 0, -multiplier);
-        }
-#else
         // Old input backends are enabled.
         if (Input.GetKey(KeyCode.A))
         {
-            transform.position += new Vector3(-multiplier, 0, 0);
+            transform.position -= transform.right * multiplier;
         }
         else if(Input.GetKey(KeyCode.D))
         {
-            transform.position += new Vector3(multiplier, 0, 0);
+            transform.position += transform.right * multiplier;
         }
         
         if(Input.GetKey(KeyCode.W))
@@ -117,6 +98,5 @@ public class ClientControls : NetworkBehaviour
         {
             transform.position = new Vector3(-10f, 0.5f, 0f);
         }
-#endif
     }
 }
