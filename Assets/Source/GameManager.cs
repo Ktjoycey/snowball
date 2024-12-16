@@ -30,9 +30,6 @@ public class GameManager : NetworkBehaviour
     private Dictionary<string, List<Transform>> spawnPoints = new Dictionary<string, List<Transform>>();
     private Dictionary<string, List<ulong>> teamRosters = new Dictionary<string, List<ulong>>();
 
-    // NetworkVariable to store the level prefab name
-    // private NetworkVariable<FixedString128Bytes> levelPrefabName = new NetworkVariable<FixedString128Bytes>();
-    // [SerializeField] private string defaultLevelPrefabName = "TestAreanPrefab";
     void Start()
     {
         Debug.Log("Hello World!");
@@ -41,41 +38,40 @@ public class GameManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
-        Debug.Log("Engine: OnNetworkSpawn");
+        Debug.Log("GameManager: OnNetworkSpawn");
         if (IsServer)
         {
+            Debug.Log("Server");
+            levelPrefab = Instantiate(Resources.Load<GameObject>(startData.LevelName));
+            GameObject spawnPointContainer = UnityUtils.FindGameObject(levelPrefab, "SpawnPoints");
+            List<GameObject> teamSpawnPoints = UnityUtils.GetTopLevelChildren(spawnPointContainer);
+            for (int i = 0, count = teamSpawnPoints.Count; i < count; ++i)
+            {
+                string teamName = teamSpawnPoints[i].name;
+                List<Transform> spawnPointsTransforms = UnityUtils.GetTopLevelChildTransforms(teamSpawnPoints[i]);
+                spawnPoints.Add(teamName, spawnPointsTransforms);
+                teamRosters.Add(teamName, new List<ulong>());
+            }
             // Debug.Log("Server spawning projectiles!");
             // SpawnProjectilesServer();
         }
 
-        if (IsHost)
-        {
-            Debug.Log("Host");
-            LoadLevel();
-            SpawnInfo spawnInfo = SelectTeamAndSpawnPos();
-            SpawnPlayer(NetworkManager.LocalClientId, spawnInfo);
-        }
-        else if (IsClient)
-        {
-            Debug.Log("Client");
+        // if (IsHost)
+        // {
+        //     Debug.Log("Host");
+        //     LoadLevel();
+        //     SpawnInfo spawnInfo = SelectTeamAndSpawnPos();
+        //     startData.PlayerStartPos = spawnInfo.SpawnPoint.position;
+        //     startData.PlayerStartEuler = spawnInfo.SpawnPoint.eulerAngles;
+        //     SpawnPlayer(NetworkManager.LocalClientId, spawnInfo);
+        //     Service.EventManager.SendEvent(EventId.LevelLoadCompleted, null);
+        // }
+        // else
+        // {
+            // Debug.Log("Client");
             GetGameMetadataServerRpc(NetworkManager.LocalClientId);
-        }
+        // }
     }
-
-    // private void SpawnProjectilesServer()
-    // {
-    //     for (int i = 0; i < BULLETS_TO_SPAWN; ++i)
-    //     {
-    //         GameObject instantiatedProjectile = Instantiate(Resources.Load<GameObject>(PROJECTILE_RESOURCE));
-    //         NetworkObject netObj = instantiatedProjectile.GetComponent<NetworkObject>();
-    //         netObj.Spawn();
-    //         // foreach (var clientId in NetworkManager.ConnectedClientsIds)
-    //         // {
-    //         //     netObj.NetworkHide(clientId);
-    //         // }
-    //         netObj.Despawn(false);
-    //     }
-    // }
 
     private void SpawnPlayer(ulong clientId, SpawnInfo spawnInfo)
     {
@@ -83,8 +79,6 @@ public class GameManager : NetworkBehaviour
         NetworkObject netObj = instantiatedPlayer.GetComponent<NetworkObject>();
         netObj.SpawnWithOwnership(clientId, true);
         teamRosters[spawnInfo.TeamName].Add(clientId);
-        instantiatedPlayer.transform.position = spawnInfo.SpawnPoint.position;
-        instantiatedPlayer.transform.rotation = spawnInfo.SpawnPoint.rotation;
     }
 
     public void SetUpNewPlayer(Transform newPlayer)
@@ -111,15 +105,19 @@ public class GameManager : NetworkBehaviour
 
     private void LoadLevel()
     {
-        levelPrefab = Instantiate(Resources.Load<GameObject>(startData.LevelName));
-        GameObject spawnPointContainer = UnityUtils.FindGameObject(levelPrefab, "SpawnPoints");
-        List<GameObject> teamSpawnPoints = UnityUtils.GetTopLevelChildren(spawnPointContainer);
-        for (int i = 0, count = teamSpawnPoints.Count; i < count; ++i)
+        Debug.Log("Load Level");
+        if (!IsServer)
         {
-            string teamName = teamSpawnPoints[i].name;
-            List<Transform> spawnPointsTransforms = UnityUtils.GetTopLevelChildTransforms(teamSpawnPoints[i]);
-            spawnPoints.Add(teamName, spawnPointsTransforms);
-            teamRosters.Add(teamName, new List<ulong>());
+            levelPrefab = Instantiate(Resources.Load<GameObject>(startData.LevelName));
+            GameObject spawnPointContainer = UnityUtils.FindGameObject(levelPrefab, "SpawnPoints");
+            List<GameObject> teamSpawnPoints = UnityUtils.GetTopLevelChildren(spawnPointContainer);
+            for (int i = 0, count = teamSpawnPoints.Count; i < count; ++i)
+            {
+                string teamName = teamSpawnPoints[i].name;
+                List<Transform> spawnPointsTransforms = UnityUtils.GetTopLevelChildTransforms(teamSpawnPoints[i]);
+                spawnPoints.Add(teamName, spawnPointsTransforms);
+                teamRosters.Add(teamName, new List<ulong>());
+            }
         }
         Service.EventManager.SendEvent(EventId.LevelLoadCompleted, null);
     }
@@ -152,22 +150,41 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Requesting game data from server");
         SpawnInfo spawnInfo = SelectTeamAndSpawnPos();
+        startData.PlayerTeamName = spawnInfo.TeamName;
+        startData.PlayerStartPos = spawnInfo.SpawnPoint.position;
+        startData.PlayerStartEuler = spawnInfo.SpawnPoint.eulerAngles;
         SpawnPlayer(clientId, spawnInfo);
-        ReceiveGameMetadataClientRpc(startData);
+
+        ClientRpcParams sendParams = new ClientRpcParams();
+        sendParams.Send = new ClientRpcSendParams();
+        sendParams.Send.TargetClientIds = new ulong[] { clientId };
+        ReceiveGameMetadataClientRpc(startData, sendParams);
     }
 
     [ClientRpc]
-    private void ReceiveGameMetadataClientRpc(GameStartData serverStartData)
+    private void ReceiveGameMetadataClientRpc(GameStartData serverStartData, ClientRpcParams clientRpcParams = default)
     {
         Debug.Log("Received start data, level: " + serverStartData.LevelName);
         startData.LevelName = serverStartData.LevelName;
+        startData.PlayerStartPos = serverStartData.PlayerStartPos;
+        startData.PlayerStartEuler = serverStartData.PlayerStartEuler;
+
         LoadLevel();
+    }
+
+    public void PlacePlayerAtSpawn(ClientControls instantiatedPlayer)
+    {
+        instantiatedPlayer.transform.position = startData.PlayerStartPos;
+        instantiatedPlayer.transform.eulerAngles = startData.PlayerStartEuler;
+        Rigidbody rigidBody = instantiatedPlayer.GetComponent<Rigidbody>();
+        rigidBody.position = startData.PlayerStartPos;
+        rigidBody.rotation = Quaternion.Euler(startData.PlayerStartEuler);
+        Debug.Log("Placed player " + instantiatedPlayer.OwnerClientId + " at " + startData.PlayerStartPos.ToString() + " <> " + instantiatedPlayer.transform.position.ToString());
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void FireProjectileServerRpc(Vector3 position, Vector3 euler, Vector3 fwd)
     {
-
         NetworkObject projectile = NetworkObjectPool.Singleton.GetNetworkObject(PROJECTILE_RESOURCE, position, Quaternion.Euler(euler));
         projectile.Spawn();
         Rigidbody rb = projectile.GetComponent<Rigidbody>();

@@ -27,10 +27,25 @@ public class ClientControls : NetworkBehaviour
 
         if (IsOwner)
         {
-            Debug.Log("Setting up new player!");
+            Debug.Log("Player OnNetworkSpawn - Setting up new player!");
+            Service.EventManager.AddListener(EventId.LevelLoadCompleted, OnLevelLoadComplete);
             gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
             gameManager.SetUpNewPlayer(transform);
         }
+    }
+
+    public override void OnGainedOwnership()
+    {
+        base.OnGainedOwnership();
+    }
+
+    private bool OnLevelLoadComplete(object cookie)
+    {
+        Debug.Log("Level Load Complete for " + OwnerClientId + ", " + IsOwner);
+        gameManager.PlacePlayerAtSpawn(this);
+        Debug.Log("POS " + transform.position.ToString());
+        Service.EventManager.RemoveListener(EventId.LevelLoadCompleted, OnLevelLoadComplete);
+        return false;
     }
 
     private void Update()
@@ -96,6 +111,11 @@ public class ClientControls : NetworkBehaviour
                 ProjectileOriginReference.eulerAngles,
                 ProjectileOriginReference.forward
             );
+        }
+
+        if (Input.GetKey(KeyCode.P))
+        {
+            transform.position = new Vector3(-10f, 0.5f, 0f);
         }
 #endif
     }

@@ -10,7 +10,6 @@ public class Engine : MonoBehaviour
 {
     private void Start()
     {
-        Debug.Log("Hello World!");
         DontDestroyOnLoad(gameObject);
     }
 
