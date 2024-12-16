@@ -24,6 +24,7 @@ public class Projectile : NetworkBehaviour
         {
             Debug.Log("Collision with " + collision.transform.name);
             rigidBody.linearVelocity = Vector3.zero;
+            rigidBody.angularVelocity = Vector3.zero;
             networkObj.Despawn(false);
             NetworkObjectPool.Singleton.ReturnNetworkObject(networkObj, Constants.SNOWBALL_PREFAB_NAME);
         }

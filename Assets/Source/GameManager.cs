@@ -190,10 +190,12 @@ public class GameManager : NetworkBehaviour
         NetworkObject projectile = NetworkObjectPool.Singleton.GetNetworkObject(
             Constants.SNOWBALL_PREFAB_NAME, position, Quaternion.Euler(euler));
 
-        projectile.Spawn();
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
+        rb.position = position;
+        rb.rotation = Quaternion.identity;
         Projectile projComp = projectile.GetComponent<Projectile>();
         projComp.SetOwner(playerTransforms[ownerId]);
+        projectile.Spawn();
 
         float forceMultiplier = 600f;
         rb.AddForce(new Vector3(fwd.x * forceMultiplier, 300f, fwd.z * forceMultiplier));
