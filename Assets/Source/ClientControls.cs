@@ -90,7 +90,8 @@ public class ClientControls : NetworkBehaviour
             gameManager.FireProjectileServerRpc(
                 ProjectileOriginReference.position,
                 ProjectileOriginReference.eulerAngles,
-                ProjectileOriginReference.forward
+                ProjectileOriginReference.forward,
+                OwnerClientId
             );
         }
 

@@ -113,6 +113,19 @@ public class NetworkObjectPool : NetworkBehaviour
         m_PooledObjects[prefab].Release(networkObject);
     }
 
+    public void ReturnNetworkObject(NetworkObject networkObject, string prefabName)
+    {
+        foreach (GameObject prefab in m_Prefabs)
+        {
+            if (prefab.name == prefabName)
+            {
+                m_PooledObjects[prefab].Release(networkObject);
+                return;
+            }
+        }
+        Debug.LogError("No prefab found in pool by name: " + prefabName);
+    }
+
     /// <summary>
     /// Builds up the cache for a prefab.
     /// </summary>

@@ -433,7 +433,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
-  defaultLevelPrefabName: TestAreanPrefab
 --- !u!4 &617256043
 Transform:
   m_ObjectHideFlags: 0
@@ -739,7 +738,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   PooledPrefabsList:
-  - Prefab: {fileID: 8471999906524829067, guid: 53f3b297af967411aa3e433419f9e63b, type: 3}
+  - Prefab: {fileID: 8684039603205588185, guid: 84191c534a4438243aab9099c5eb02cd, type: 3}
     PrewarmCount: 30
 --- !u!4 &1880951831
 Transform:

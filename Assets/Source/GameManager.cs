@@ -21,7 +21,7 @@ struct SpawnInfo
 public class GameManager : NetworkBehaviour
 {
     public const int BULLETS_TO_SPAWN = 30;
-    public const string PROJECTILE_RESOURCE = "Projectile";
+    public const string PROJECTILE_RESOURCE = "Snowball";
     public const string PLAYER_RESOURCE = "PlayerPrefab";
     private const string CAMERA_NAME = "Main Camera";
 
@@ -29,6 +29,7 @@ public class GameManager : NetworkBehaviour
     private GameObject levelPrefab;
     private Dictionary<string, List<Transform>> spawnPoints = new Dictionary<string, List<Transform>>();
     private Dictionary<string, List<ulong>> teamRosters = new Dictionary<string, List<ulong>>();
+    private Dictionary<ulong, Transform> playerTransforms = new Dictionary<ulong, Transform>();
 
     void Start()
     {
@@ -77,6 +78,7 @@ public class GameManager : NetworkBehaviour
     {
         GameObject instantiatedPlayer = Instantiate(Resources.Load<GameObject>(PLAYER_RESOURCE));
         NetworkObject netObj = instantiatedPlayer.GetComponent<NetworkObject>();
+        playerTransforms.Add(clientId, instantiatedPlayer.transform);
         netObj.SpawnWithOwnership(clientId, true);
         teamRosters[spawnInfo.TeamName].Add(clientId);
     }
@@ -183,11 +185,16 @@ public class GameManager : NetworkBehaviour
     }
 
     [ServerRpc(RequireOwnership = false)]
-    public void FireProjectileServerRpc(Vector3 position, Vector3 euler, Vector3 fwd)
+    public void FireProjectileServerRpc(Vector3 position, Vector3 euler, Vector3 fwd, ulong ownerId)
     {
-        NetworkObject projectile = NetworkObjectPool.Singleton.GetNetworkObject(PROJECTILE_RESOURCE, position, Quaternion.Euler(euler));
+        NetworkObject projectile = NetworkObjectPool.Singleton.GetNetworkObject(
+            Constants.SNOWBALL_PREFAB_NAME, position, Quaternion.Euler(euler));
+
         projectile.Spawn();
         Rigidbody rb = projectile.GetComponent<Rigidbody>();
+        Projectile projComp = projectile.GetComponent<Projectile>();
+        projComp.SetOwner(playerTransforms[ownerId]);
+
         float forceMultiplier = 600f;
         rb.AddForce(new Vector3(fwd.x * forceMultiplier, 300f, fwd.z * forceMultiplier));
     }
